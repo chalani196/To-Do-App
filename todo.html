@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ToDo — Sample-style UI</title>
+<style>
+  :root{
+    --bg:#f3f3f5;
+    --card:#ffffff;
+    --muted:#8b8f98;
+    --accent:#f6c9c0; /* soft pink */
+    --accent-2:#6fa8ff; /* soft blue */
+    --chip:#f7eef0;
+    --radius:18px;
+    --shadow: 0 8px 24px rgba(15,20,30,0.06);
+  }
+
+  html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial;}
+  body{
+    background:var(--bg);
+    display:flex;
+    justify-content:center;
+    padding:28px;
+  }
+
+  /* Mobile artboard */
+  .phone {
+    width: 360px;
+    min-height:720px;
+    background:var(--card);
+    border-radius:28px;
+    box-shadow:0 20px 40px rgba(10,10,20,0.12);
+    padding:18px;
+    box-sizing:border-box;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* top header small */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .date-small{font-size:12px;color:var(--muted)}
+  .title{font-weight:700;font-size:20px;letter-spacing:0.2px}
+  .dots{margin-left:auto; width:26px;height:26px;border-radius:8px;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700}
+
+  /* date strip (pills) */
+  .date-strip{
+    display:flex;
+    gap:8px;
+    margin:14px 0 18px;
+    overflow:auto;
+    padding-bottom:6px;
+  }
+  .day-pill{
+    min-width:52px;
+    height:52px;
+    border-radius:14px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    cursor:pointer;
+    color:var(--muted);
+    background:transparent;
+    border:1px solid rgba(140,144,152,0.06);
+    transition:all .22s ease;
+  }
+  .day-pill .num{font-weight:700;margin-top:3px}
+  .day-pill.active{
+    background:var(--accent);
+    color:#fff;
+    box-shadow:0 6px 18px rgba(246,201,192,0.28);
+    transform:translateY(-4px);
+  }
+
+  /* filters small */
+  .filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:13px;color:var(--muted)}
+  .filters button{background:transparent;border:none;padding:6px 8px;border-radius:10px;cursor:pointer;color:var(--muted)}
+  .filters button.active{background:transparent;color:#111;font-weight:600}
+
+  /* task list */
+  .list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-bottom:72px;
+  }
+  .task-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:linear-gradient(180deg, #fff, #fff);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:var(--shadow);
+    border:1px solid rgba(10,10,20,0.03);
+  }
+  .task-left{flex:1;display:flex;flex-direction:column;gap:6px}
+  .task-time{font-size:12px;color:var(--muted)}
+  .task-title{font-weight:700}
+  .task-sub{font-size:13px;color:#666}
+  .task-right{width:52px;height:52px;border-radius:12px;overflow:hidden;background:var(--chip);display:flex;align-items:center;justify-content:center}
+  .task-right img{width:100%;height:100%;object-fit:cover}
+
+  .task-actions{display:flex;gap:8px;align-items:center;margin-left:8px}
+  .btn-text{background:transparent;border:none;color:var(--muted);cursor:pointer;font-weight:600}
+
+  /* floating add button */
+  .fab{
+    position:absolute;right:18px;bottom:18px;width:64px;height:64px;border-radius:50%;background:linear-gradient(180deg,var(--accent-2),#3f87ff);display:flex;align-items:center;justify-content:center;color:white;font-size:30px;border:none;box-shadow:0 12px 30px rgba(63,135,255,0.22);cursor:pointer;
+  }
+
+  /* bottom decorative + count */
+  .bottom-left{
+    position:absolute;left:18px;bottom:22px;color:var(--muted);font-weight:600;font-size:13px;
+  }
+
+  /* New Task panel (overlay) */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,10,20,0.28);display:flex;align-items:flex-end;justify-content:center;padding:24px;box-sizing:border-box;visibility:hidden;opacity:0;transition:all .22s ease;
+  }
+  .overlay.show{visibility:visible;opacity:1}
+  .panel{
+    width:360px;border-radius:18px;background:var(--card);padding:18px;box-shadow:0 30px 60px rgba(10,10,20,0.2);transform:translateY(24px);transition:transform .22s ease;
+  }
+  .overlay.show .panel{transform:translateY(0)}
+  .panel h3{margin:0 0 8px;font-size:18px}
+  .form-row{display:flex;gap:8px;margin-bottom:12px}
+  .input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(10,10,20,0.06);background:#fcfcfd;font-size:14px;box-sizing:border-box}
+  textarea{min-height:80px;resize:none}
+  .action-row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+  .add-primary{background:linear-gradient(180deg,var(--accent-2),#3f87ff);border:none;color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer}
+
+  /* mini calendar grid in panel */
+  .mini-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:8px 0 12px}
+  .mini-cal button{height:36px;border-radius:8px;border:1px solid rgba(10,10,20,0.04);background:#fff;cursor:pointer;font-size:13px;color:#6b6f77}
+  .mini-cal button.active{background:var(--chip);border-color:rgba(246,201,192,0.6);box-shadow:0 6px 14px rgba(246,201,192,0.14)}
+
+  /* completed */
+  .done .task-title{text-decoration:line-through;color:#9aa0a6}
+  .counter{font-weight:700;color:#333}
+  /* responsive minor */
+  @media (max-width:400px){
+    .phone{width:340px}
+    .panel{width:340px}
+  }
+</style>
+</head>
+<body>
+
+<div class="phone" role="application" aria-label="ToDo mobile view">
+  <div class="topbar">
+    <div>
+      <div class="date-small">wednesday 20th March</div>
+      <div class="title">ToDo List</div>
+    </div>
+    <div class="dots">•••</div>
+  </div>
+
+  <div class="date-strip" id="dateStrip" aria-label="Date selector">
+    <!-- JS will populate -->
+  </div>
+
+  <div class="filters" role="tablist" aria-label="Task Filters">
+    <button id="filterAll" class="active">All</button>
+    <button id="filterComplete">Complete</button>
+    <button id="filterActive">Active</button>
+  </div>
+
+  <div class="list" id="taskList" aria-live="polite">
+    <!-- tasks go here -->
+  </div>
+
+  <div class="bottom-left"><span id="taskCount">0 tasks</span></div>
+  <button class="fab" id="openNew" aria-label="Add new task">+</button>
+</div>
+
+<!-- New Task overlay panel -->
+<div class="overlay" id="overlay" aria-hidden="true">
+  <div class="panel" role="dialog" aria-modal="true" aria-label="New Task">
+    <h3>New Task</h3>
+
+    <div class="mini-cal" id="miniCal">
+      <!-- simple 28-day cal -->
+    </div>
+
+    <div class="form-row">
+      <input class="input" id="taskTitle" placeholder="Task title" />
+    </div>
+    <div class="form-row">
+      <textarea id="taskNotes" placeholder="Notes (optional)"></textarea>
+    </div>
+    <div class="form-row">
+      <input type="time" id="taskTime" class="input" />
+      <select id="taskPriority" class="input">
+        <option value="low">Low</option>
+        <option value="med">Medium</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+
+    <div class="action-row">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="cancelBtn" class="btn-text">Cancel</button>
+      </div>
+      <div>
+        <button id="addTaskBtn" class="add-primary">Add Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- UI data + helpers ---------- */
+const dateStrip = document.getElementById('dateStrip');
+const miniCal = document.getElementById('miniCal');
+const taskListEl = document.getElementById('taskList');
+const taskCountEl = document.getElementById('taskCount');
+
+let tasks = []; // {id, title, notes, time, date, priority, done, img}
+let activeFilter = 'all';
+let selectedDateISO = new Date().toISOString().slice(0,10);
+
+/* ---------- Build top date strip (7 days centered) ---------- */
+function buildDateStrip(centerDate=new Date()){
+  dateStrip.innerHTML = '';
+  for(let i=-3;i<=3;i++){
+    const d = new Date(centerDate);
+    d.setDate(centerDate.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    const el = document.createElement('div');
+    el.className='day-pill' + (iso===selectedDateISO?' active':'');
+    el.dataset.iso = iso;
+    el.innerHTML = `<div class="dow">${d.toLocaleString(undefined,{weekday:'short'})}</div>
+                    <div class="num">${d.getDate()}</div>`;
+    el.addEventListener('click',()=> {
+      selectedDateISO = iso;
+      document.querySelectorAll('.day-pill').forEach(x=>x.classList.remove('active'));
+      el.classList.add('active');
+      renderTasks();
+    });
+    dateStrip.appendChild(el);
+  }
+}
+buildDateStrip(new Date());
+
+/* ---------- Mini calendar (simple 28 day grid for quick pick) ---------- */
+function buildMiniCal(){
+  miniCal.innerHTML='';
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate()-14);
+  for(let i=0;i<28;i++){
+    const d = new Date(start);
+    d.setDate(start.getDate()+i);
+    const iso = d.toISOString().slice(0,10);
+    const btn = document.createElement('button');
+    btn.textContent = d.getDate();
+    if(iso===selectedDateISO) btn.classList.add('active');
+    btn.addEventListener('click', ()=>{
+      selectedDateISO = iso;
+      document.querySelectorAll('#miniCal button').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    miniCal.appendChild(btn);
+  }
+}
+buildMiniCal();
+
+/* ---------- Task rendering ---------- */
+function renderTasks(){
+  taskListEl.innerHTML='';
+  const filtered = tasks.filter(t=>{
+    if(activeFilter==='complete') return t.done;
+    if(activeFilter==='active') return !t.done;
+    return true;
+  }).filter(t => t.date === selectedDateISO);
+
+  if(filtered.length===0){
+    taskListEl.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px">No tasks for this day</div>`;
+  } else {
+    filtered.forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'task-card' + (t.done?' done':'');
+      card.innerHTML = `
+        <div class="task-left">
+          <div class="task-time">${t.time || '—'}</div>
+          <div class="task-title">${escapeHtml(t.title)}</div>
+          <div class="task-sub">${escapeHtml(t.notes||'')}</div>
+        </div>
+        <div style="display:flex;align-items:center">
+          <div class="task-right"><img src="${t.img}" alt="img"></div>
+          <div class="task-actions">
+            <button class="btn-text" data-id="${t.id}" data-action="toggle">${t.done? 'Undo' : 'Done'}</button>
+            <button class="btn-text" data-id="${t.id}" data-action="del">Del</button>
+          </div>
+        </div>
+      `;
+      taskListEl.appendChild(card);
+    });
+  }
+  taskCountEl.textContent = `${tasks.filter(t=>t.date===selectedDateISO).length} tasks`;
+}
+
+function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+
+/* ---------- simple image generator for right chip (colored abstract) ---------- */
+function randomImg(seed){
+  const colors = [
+    '#f6c9c0','#ffe7d9','#cfeef2','#e9e8ff','#f0f7ea','#fde2f0','#e6f7ff'
+  ];
+  const c = colors[Math.abs(hashCode(seed)) % colors.length];
+  // create data url svg
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'>
+    <rect width='100%' height='100%' fill='${c}' rx='16'/>
+    <circle cx='90' cy='20' r='28' fill='#ffffff33'/>
+    <path d='M0 100 C 40 40, 80 80, 120 40 L120 120 L0 120 Z' fill='#ffffff55'/>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+function hashCode(s){ let h=0; for(let i=0;i<s.length;i++) h=(h<<5)-h + s.charCodeAt(i)|0; return h; }
+
+/* ---------- add sample tasks to feel like screenshot ---------- */
+function seedSample(){
+  const base = new Date();
+  const iso = base.toISOString().slice(0,10);
+  const later = new Date(base); later.setDate(base.getDate()+1);
+  tasks.push({id:uid(), title:'Meeting: UX Case', notes:'Discuss Milton website', time:'03:00 PM', date:iso, priority:'high', done:false, img:randomImg('a')});
+  tasks.push({id:uid(), title:'Fitness - 2 hours', notes:'Coach Jill Stevens', time:'05:30 PM', date:iso, priority:'med', done:false, img:randomImg('b')});
+  tasks.push({id:uid(), title:'Aperitif', notes:'Michaela house', time:'07:20 PM', date:iso, priority:'low', done:false, img:randomImg('c')});
+  tasks.push({id:uid(), title:'Finish App Design', notes:'3/4 screens', time:'09:00 PM', date:iso, priority:'high', done:false, img:randomImg('d')});
+  tasks.push({id:uid(), title:'Tomorrow Task', notes:'Example', time:'10:00 AM', date:later.toISOString().slice(0,10), priority:'low', done:false, img:randomImg('e')});
+}
+seedSample();
+renderTasks();
+
+/* ---------- interactions ---------- */
+document.getElementById('filterAll').addEventListener('click', ()=>{ setFilter('all') });
+document.getElementById('filterComplete').addEventListener('click', ()=>{ setFilter('complete') });
+document.getElementById('filterActive').addEventListener('click', ()=>{ setFilter('active') });
+
+function setFilter(f){
+  activeFilter = f;
+  document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('active'));
+  if(f==='all') document.getElementById('filterAll').classList.add('active');
+  if(f==='complete') document.getElementById('filterComplete').classList.add('active');
+  if(f==='active') document.getElementById('filterActive').classList.add('active');
+  renderTasks();
+}
+
+/* delegate task action clicks */
+taskListEl.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('button[data-id]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if(action==='toggle'){
+    const t = tasks.find(x=>x.id===id);
+    if(t) t.done = !t.done;
+    renderTasks();
+  } else if(action==='del'){
+    tasks = tasks.filter(x=>x.id!==id);
+    renderTasks();
+  }
+});
+
+/* new task overlay logic */
+const overlay = document.getElementById('overlay');
+const openNew = document.getElementById('openNew');
+const cancelBtn = document.getElementById('cancelBtn');
+const addTaskBtn = document.getElementById('addTaskBtn');
+
+openNew.addEventListener('click', ()=>{
+  buildMiniCal(); // refresh mini cal active state
+  overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
+});
+cancelBtn.addEventListener('click', ()=> closeOverlay());
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeOverlay(); });
+
+function closeOverlay(){
+  overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true');
+  // clear fields
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskNotes').value='';
+  document.getElementById('taskTime').value='';
+  document.getElementById('taskPriority').value='low';
+}
+
+/* add task */
+addTaskBtn.addEventListener('click', ()=>{
+  const title = document.getElementById('taskTitle').value.trim();
+  if(!title) { alert('Please enter a task title'); return; }
+  const notes = document.getElementById('taskNotes').value.trim();
+  const time = document.getElementById('taskTime').value ? formatTime(document.getElementById('taskTime').value) : '';
+  const priority = document.getElementById('taskPriority').value;
+  const newTask = {
+    id: uid(),
+    title,
+    notes,
+    time,
+    date: selectedDateISO,
+    priority,
+    done:false,
+    img: randomImg(title+Date.now())
+  };
+  tasks.unshift(newTask);
+  renderTasks();
+  closeOverlay();
+});
+
+/* helpers */
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function formatTime(hhmm){
+  const [h,m] = hhmm.split(':').map(Number);
+  const ampm = h>=12? 'PM':'AM';
+  const hh12 = ((h+11)%12+1);
+  return `${hh12.toString().padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+</script>
+</body>
+</html>
